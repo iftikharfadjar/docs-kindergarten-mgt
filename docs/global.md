@@ -319,7 +319,41 @@ GET /api/v1/teachers/all
 
 "position": "Homeroom Teacher",
 
-"status": "active"
+
+"phone_number": "+6281234567890",
+
+"gender": "male",
+
+"birth_place": "Bandung",
+
+"birth_date": "1990-05-10",
+
+"address": "Jl. Merdeka No. 10, Bandung",
+
+"religion": "Islam",
+
+"nationality": "Indonesia",
+
+"marital_status": "married",
+
+"employee_number": "TCH-2026-0001",
+
+"join_date": "2026-05-24",
+
+"position": "Homeroom Teacher",
+
+"education_level": "Bachelor",
+
+"major": "Early Childhood Education",
+
+"status": "active",
+
+"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
+
+"created_at": "2026-05-24T08:00:00Z",
+
+"updated_at": "2026-05-24T08:00:00Z"
+
 
 },
 
@@ -333,7 +367,41 @@ GET /api/v1/teachers/all
 
 "position": "Assistant Teacher",
 
-"status": "active"
+
+"phone_number": "+6281234567890",
+
+"gender": "male",
+
+"birth_place": "Bandung",
+
+"birth_date": "1990-05-10",
+
+"address": "Jl. Merdeka No. 10, Bandung",
+
+"religion": "Islam",
+
+"nationality": "Indonesia",
+
+"marital_status": "married",
+
+"employee_number": "TCH-2026-0001",
+
+"join_date": "2026-05-24",
+
+"position": "Homeroom Teacher",
+
+"education_level": "Bachelor",
+
+"major": "Early Childhood Education",
+
+"status": "active",
+
+"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
+
+"created_at": "2026-05-24T08:00:00Z",
+
+"updated_at": "2026-05-24T08:00:00Z"
+
 
 }
 
@@ -371,9 +439,41 @@ GET /api/v1/teachers?page=1&limit=10&search=john&status=active&sort_by=created_a
 
 "position": "Homeroom Teacher",
 
+
+"phone_number": "+6281234567890",
+
+"gender": "male",
+
+"birth_place": "Bandung",
+
+"birth_date": "1990-05-10",
+
+"address": "Jl. Merdeka No. 10, Bandung",
+
+"religion": "Islam",
+
+"nationality": "Indonesia",
+
+"marital_status": "married",
+
+"employee_number": "TCH-2026-0001",
+
+"join_date": "2026-05-24",
+
+"position": "Homeroom Teacher",
+
+"education_level": "Bachelor",
+
+"major": "Early Childhood Education",
+
 "status": "active",
 
-"created_at": "2026-05-24T08:00:00Z"
+"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
+
+"created_at": "2026-05-24T08:00:00Z",
+
+"updated_at": "2026-05-24T08:00:00Z"
+
 
 },
 
@@ -389,9 +489,41 @@ GET /api/v1/teachers?page=1&limit=10&search=john&status=active&sort_by=created_a
 
 "position": "Assistant Teacher",
 
+
+"phone_number": "+6281234567890",
+
+"gender": "male",
+
+"birth_place": "Bandung",
+
+"birth_date": "1990-05-10",
+
+"address": "Jl. Merdeka No. 10, Bandung",
+
+"religion": "Islam",
+
+"nationality": "Indonesia",
+
+"marital_status": "married",
+
+"employee_number": "TCH-2026-0001",
+
+"join_date": "2026-05-24",
+
+"position": "Homeroom Teacher",
+
+"education_level": "Bachelor",
+
+"major": "Early Childhood Education",
+
 "status": "active",
 
-"created_at": "2026-05-23T08:00:00Z"
+"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
+
+"created_at": "2026-05-24T08:00:00Z",
+
+"updated_at": "2026-05-24T08:00:00Z"
+
 
 }
 
