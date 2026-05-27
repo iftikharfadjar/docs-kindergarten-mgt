@@ -1,570 +1,565 @@
 # Global Rules
 
-- when I say “BE”, it refer to folder be-kindergarten-mgmt for backend services
-- when I say “FE”, it refer to folder fe-kindergarten-mgmt for backend services
+- When I say "BE", it refers to folder `be-kindergarten-mgmt` for backend services
+- When I say "FE", it refers to folder `fe-kindergarten-mgmt` for frontend services
+
+---
 
 # Global Backend Rules
 
-- EVERY endpoint or query - mutation graphql creation, SHOULD HAVE tested without finding Error.
-- Every Domain SHOULD HAVE endpoint or Query - mutation for Create, Update, Delete by Id, Delete Multiple Id, Get One by Id, Get List All, Get List Pagination . For Example,Register Teacher, It will also create :
-    1. Create Teacher
-    2. Update Teacher
-    3. Delete Teacher By Id
-    4. Delete Multiple Teacher
-    5. Get Teacher By Id
-    6. Get List Teacher All
-    7. Get List Teacher Pagination
+- **API Paradigm:** Hybrid — GraphQL for all relational CRUD, REST for auth and media upload only.
+- **ID Format:** UUID v4 (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+- EVERY GraphQL query or mutation creation SHOULD HAVE been tested without finding errors.
+- Every Domain SHOULD HAVE queries and mutations for:
+  1. Create (Mutation)
+  2. Update (Mutation)
+  3. Delete by Id — Soft Delete (Mutation)
+  4. Delete Multiple Ids — Soft Delete (Mutation)
+  5. Get One by Id (Query)
+  6. Get List All (Query)
+  7. Get List Pagination (Query)
 
-- Example format Request and Response Body Below :
+---
 
-### **Teacher API Request & Response Body**
+## REST Response Envelope (Auth & Media Only)
 
-**1. Create Teacher**
+REST is used exclusively for authentication and media upload endpoints. All REST responses follow this envelope:
 
-**Request Body**
+**Success Response:**
 
+```json
 {
-
-"full_name": "John Doe",
-
-"email": "john.doe@example.com",
-
-"phone_number": "+6281234567890",
-
-"gender": "male",
-
-"birth_place": "Bandung",
-
-"birth_date": "1990-05-10",
-
-"address": "Jl. Merdeka No. 10, Bandung",
-
-"religion": "Islam",
-
-"nationality": "Indonesia",
-
-"marital_status": "married",
-
-"employee_number": "TCH-2026-0001",
-
-"join_date": "2026-05-24",
-
-"position": "Homeroom Teacher",
-
-"education_level": "Bachelor",
-
-"major": "Early Childhood Education",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe.jpg"
-
+  "status": "success",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1...",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "role": "TEACHER"
+    }
+  }
 }
+```
 
-**Success Response**
+**Error Response:**
 
+```json
 {
-
-"success": true,
-
-"message": "Teacher created successfully",
-
-"data": {
-
-"id": "01JW4KQ7Y9E8V2F3T6M8A1B2C3",
-
-"full_name": "John Doe",
-
-"email": "john.doe@example.com",
-
-"phone_number": "+6281234567890",
-
-"gender": "male",
-
-"birth_place": "Bandung",
-
-"birth_date": "1990-05-10",
-
-"address": "Jl. Merdeka No. 10, Bandung",
-
-"religion": "Islam",
-
-"nationality": "Indonesia",
-
-"marital_status": "married",
-
-"employee_number": "TCH-2026-0001",
-
-"join_date": "2026-05-24",
-
-"position": "Homeroom Teacher",
-
-"education_level": "Bachelor",
-
-"major": "Early Childhood Education",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
-
-"created_at": "2026-05-24T08:00:00Z",
-
-"updated_at": "2026-05-24T08:00:00Z"
-
+  "status": "error",
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid email or password"
+  }
 }
+```
 
-}
+---
 
-#### **2. Update Teacher**
+## GraphQL Error Response Pattern
 
-**Request Body**
+GraphQL errors follow the standard GraphQL error format:
 
+```json
 {
-
-"full_name": "John Doe Updated",
-
-"phone_number": "+6289876543210",
-
-"address": "Jl. Asia Afrika No. 20, Bandung",
-
-"position": "Senior Teacher",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe-updated.jpg"
-
+  "data": null,
+  "errors": [
+    {
+      "message": "Teacher not found",
+      "path": ["getTeacherById"],
+      "extensions": {
+        "code": "NOT_FOUND"
+      }
+    }
+  ]
 }
+```
 
-**Success Response**
+Common error codes in `extensions.code`:
 
+| Code | Description |
+|------|-------------|
+| `UNAUTHORIZED` | Missing or invalid JWT token |
+| `FORBIDDEN` | Valid token but insufficient role/scope |
+| `NOT_FOUND` | Resource does not exist |
+| `VALIDATION_ERROR` | Input validation failure |
+| `CONFLICT` | Duplicate or conflicting data |
+| `INTERNAL_ERROR` | Unexpected server error |
+
+---
+
+## Example: Teacher Full CRUD (GraphQL)
+
+Below is a complete example of the 7 required operations for the Teacher (User + Profile) domain. All other domains must follow this same pattern.
+
+---
+
+### **1. Create Teacher (Mutation)**
+
+```graphql
+mutation CreateTeacher($input: CreateTeacherInput!) {
+  createTeacher(input: $input) {
+    id
+    email
+    role
+    profile {
+      firstName
+      lastName
+      phone
+      gender
+      birthPlace
+      birthDate
+      address
+      religion
+      nationality
+      maritalStatus
+      employeeNumber
+      joinDate
+      position
+      educationLevel
+      major
+      status
+      photoUrl
+    }
+    createdAt
+    updatedAt
+  }
+}
+```
+
+**Variables:**
+
+```json
 {
-
-"success": true,
-
-"message": "Teacher updated successfully",
-
-"data": {
-
-"id": "01JW4KQ7Y9E8V2F3T6M8A1B2C3",
-
-"full_name": "John Doe Updated",
-
-"email": "john.doe@example.com",
-
-"phone_number": "+6289876543210",
-
-"address": "Jl. Asia Afrika No. 20, Bandung",
-
-"position": "Senior Teacher",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe-updated.jpg",
-
-"updated_at": "2026-05-24T09:00:00Z"
-
+  "input": {
+    "email": "john.doe@example.com",
+    "password": "securePassword123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "+6281234567890",
+    "gender": "male",
+    "birthPlace": "Bandung",
+    "birthDate": "1990-05-10",
+    "address": "Jl. Merdeka No. 10, Bandung",
+    "religion": "Islam",
+    "nationality": "Indonesia",
+    "maritalStatus": "married",
+    "employeeNumber": "TCH-2026-0001",
+    "joinDate": "2026-05-24",
+    "position": "Homeroom Teacher",
+    "educationLevel": "Bachelor",
+    "major": "Early Childhood Education",
+    "status": "active",
+    "photoUrl": "https://cdn.example.com/teachers/john-doe.jpg"
+  }
 }
+```
 
-}
+**Success Response:**
 
-#### **3. Delete Teacher By Id**
-
-**Request Path**
-
-DELETE /api/v1/teachers/{id}
-
-**Success Response**
-
+```json
 {
-
-"success": true,
-
-"message": "Teacher deleted successfully",
-
-"data": {
-
-"id": "01JW4KQ7Y9E8V2F3T6M8A1B2C3"
-
+  "data": {
+    "createTeacher": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "john.doe@example.com",
+      "role": "TEACHER",
+      "profile": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "phone": "+6281234567890",
+        "gender": "male",
+        "birthPlace": "Bandung",
+        "birthDate": "1990-05-10",
+        "address": "Jl. Merdeka No. 10, Bandung",
+        "religion": "Islam",
+        "nationality": "Indonesia",
+        "maritalStatus": "married",
+        "employeeNumber": "TCH-2026-0001",
+        "joinDate": "2026-05-24",
+        "position": "Homeroom Teacher",
+        "educationLevel": "Bachelor",
+        "major": "Early Childhood Education",
+        "status": "active",
+        "photoUrl": "https://cdn.example.com/teachers/john-doe.jpg"
+      },
+      "createdAt": "2026-05-24T08:00:00Z",
+      "updatedAt": "2026-05-24T08:00:00Z"
+    }
+  }
 }
+```
 
+---
+
+### **2. Update Teacher (Mutation)**
+
+```graphql
+mutation UpdateTeacher($userId: ID!, $input: UpdateTeacherInput!) {
+  updateTeacher(userId: $userId, input: $input) {
+    id
+    profile {
+      firstName
+      lastName
+      phone
+      address
+      position
+      status
+      photoUrl
+    }
+    updatedAt
+  }
 }
+```
 
-#### **4. Delete Multiple Teacher**
+**Variables:**
 
-**Request Body**
-
+```json
 {
-
-"ids": [
-
-"01JW4KQ7Y9E8V2F3T6M8A1B2C3",
-
-"01JW4KR8Z1N9X4Y5U7P2D6E8F9",
-
-"01JW4KS9A2B3C4D5E6F7G8H9J0"
-
-]
-
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "input": {
+    "firstName": "John Updated",
+    "phone": "+6289876543210",
+    "address": "Jl. Asia Afrika No. 20, Bandung",
+    "position": "Senior Teacher",
+    "status": "active",
+    "photoUrl": "https://cdn.example.com/teachers/john-doe-updated.jpg"
+  }
 }
+```
 
-**Success Response**
+**Success Response:**
 
+```json
 {
-
-"success": true,
-
-"message": "Teachers deleted successfully",
-
-"data": {
-
-"deleted_count": 3,
-
-"deleted_ids": [
-
-"01JW4KQ7Y9E8V2F3T6M8A1B2C3",
-
-"01JW4KR8Z1N9X4Y5U7P2D6E8F9",
-
-"01JW4KS9A2B3C4D5E6F7G8H9J0"
-
-]
-
+  "data": {
+    "updateTeacher": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "profile": {
+        "firstName": "John Updated",
+        "lastName": "Doe",
+        "phone": "+6289876543210",
+        "address": "Jl. Asia Afrika No. 20, Bandung",
+        "position": "Senior Teacher",
+        "status": "active",
+        "photoUrl": "https://cdn.example.com/teachers/john-doe-updated.jpg"
+      },
+      "updatedAt": "2026-05-24T09:00:00Z"
+    }
+  }
 }
+```
 
+---
+
+### **3. Delete Teacher By Id (Mutation — Soft Delete)**
+
+```graphql
+mutation SoftDeleteTeacher($userId: ID!) {
+  softDeleteTeacher(userId: $userId) {
+    success
+    message
+  }
 }
+```
 
-#### **5. Get Teacher By Id**
+**Variables:**
 
-**Request Path**
-
-GET /api/v1/teachers/{id}
-
-**Success Response**
-
+```json
 {
-
-"success": true,
-
-"message": "Teacher retrieved successfully",
-
-"data": {
-
-"id": "01JW4KQ7Y9E8V2F3T6M8A1B2C3",
-
-"full_name": "John Doe",
-
-"email": "john.doe@example.com",
-
-"phone_number": "+6281234567890",
-
-"gender": "male",
-
-"birth_place": "Bandung",
-
-"birth_date": "1990-05-10",
-
-"address": "Jl. Merdeka No. 10, Bandung",
-
-"religion": "Islam",
-
-"nationality": "Indonesia",
-
-"marital_status": "married",
-
-"employee_number": "TCH-2026-0001",
-
-"join_date": "2026-05-24",
-
-"position": "Homeroom Teacher",
-
-"education_level": "Bachelor",
-
-"major": "Early Childhood Education",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
-
-"created_at": "2026-05-24T08:00:00Z",
-
-"updated_at": "2026-05-24T08:00:00Z"
-
+  "userId": "550e8400-e29b-41d4-a716-446655440000"
 }
+```
 
-}
+**Success Response:**
 
-#### **6. Get List Teacher All**
-
-**Request Path**
-
-GET /api/v1/teachers/all
-
-**Success Response**
-
+```json
 {
+  "data": {
+    "softDeleteTeacher": {
+      "success": true,
+      "message": "Teacher deleted successfully"
+    }
+  }
+}
+```
 
-"success": true,
+---
 
-"message": "Teachers retrieved successfully",
+### **4. Delete Multiple Teachers (Mutation — Soft Delete)**
 
-"data": [
+```graphql
+mutation SoftDeleteTeachers($userIds: [ID!]!) {
+  softDeleteTeachers(userIds: $userIds) {
+    success
+    message
+    deletedCount
+  }
+}
+```
 
+**Variables:**
+
+```json
 {
+  "userIds": [
+    "550e8400-e29b-41d4-a716-446655440000",
+    "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+  ]
+}
+```
 
-"id": "01JW4KQ7Y9E8V2F3T6M8A1B2C3",
+**Success Response:**
 
-"full_name": "John Doe",
-
-"email": "john.doe@example.com",
-
-"position": "Homeroom Teacher",
-
-
-"phone_number": "+6281234567890",
-
-"gender": "male",
-
-"birth_place": "Bandung",
-
-"birth_date": "1990-05-10",
-
-"address": "Jl. Merdeka No. 10, Bandung",
-
-"religion": "Islam",
-
-"nationality": "Indonesia",
-
-"marital_status": "married",
-
-"employee_number": "TCH-2026-0001",
-
-"join_date": "2026-05-24",
-
-"position": "Homeroom Teacher",
-
-"education_level": "Bachelor",
-
-"major": "Early Childhood Education",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
-
-"created_at": "2026-05-24T08:00:00Z",
-
-"updated_at": "2026-05-24T08:00:00Z"
-
-
-},
-
+```json
 {
-
-"id": "01JW4KR8Z1N9X4Y5U7P2D6E8F9",
-
-"full_name": "Jane Smith",
-
-"email": "jane.smith@example.com",
-
-"position": "Assistant Teacher",
-
-
-"phone_number": "+6281234567890",
-
-"gender": "male",
-
-"birth_place": "Bandung",
-
-"birth_date": "1990-05-10",
-
-"address": "Jl. Merdeka No. 10, Bandung",
-
-"religion": "Islam",
-
-"nationality": "Indonesia",
-
-"marital_status": "married",
-
-"employee_number": "TCH-2026-0001",
-
-"join_date": "2026-05-24",
-
-"position": "Homeroom Teacher",
-
-"education_level": "Bachelor",
-
-"major": "Early Childhood Education",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
-
-"created_at": "2026-05-24T08:00:00Z",
-
-"updated_at": "2026-05-24T08:00:00Z"
-
-
+  "data": {
+    "softDeleteTeachers": {
+      "success": true,
+      "message": "Teachers deleted successfully",
+      "deletedCount": 3
+    }
+  }
 }
+```
 
-]
+---
 
+### **5. Get Teacher By Id (Query)**
+
+```graphql
+query GetTeacherById($userId: ID!) {
+  getTeacherById(userId: $userId) {
+    id
+    email
+    role
+    profile {
+      firstName
+      lastName
+      phone
+      gender
+      birthPlace
+      birthDate
+      address
+      religion
+      nationality
+      maritalStatus
+      employeeNumber
+      joinDate
+      position
+      educationLevel
+      major
+      status
+      photoUrl
+    }
+    createdAt
+    updatedAt
+  }
 }
+```
 
-#### **7. Get List Teacher Pagination**
+**Variables:**
 
-**Request Query**
-
-GET /api/v1/teachers?page=1&limit=10&search=john&status=active&sort_by=created_at&sort_order=desc
-
-**Success Response**
-
+```json
 {
+  "userId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
 
-"success": true,
+**Success Response:**
 
-"message": "Teachers retrieved successfully",
-
-"data": {
-
-"items": [
-
+```json
 {
+  "data": {
+    "getTeacherById": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "john.doe@example.com",
+      "role": "TEACHER",
+      "profile": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "phone": "+6281234567890",
+        "gender": "male",
+        "birthPlace": "Bandung",
+        "birthDate": "1990-05-10",
+        "address": "Jl. Merdeka No. 10, Bandung",
+        "religion": "Islam",
+        "nationality": "Indonesia",
+        "maritalStatus": "married",
+        "employeeNumber": "TCH-2026-0001",
+        "joinDate": "2026-05-24",
+        "position": "Homeroom Teacher",
+        "educationLevel": "Bachelor",
+        "major": "Early Childhood Education",
+        "status": "active",
+        "photoUrl": "https://cdn.example.com/teachers/john-doe.jpg"
+      },
+      "createdAt": "2026-05-24T08:00:00Z",
+      "updatedAt": "2026-05-24T08:00:00Z"
+    }
+  }
+}
+```
 
-"id": "01JW4KQ7Y9E8V2F3T6M8A1B2C3",
+---
 
-"full_name": "John Doe",
+### **6. Get List Teachers All (Query)**
 
-"email": "john.doe@example.com",
+```graphql
+query GetTeachersAll {
+  getTeachersAll {
+    id
+    email
+    profile {
+      firstName
+      lastName
+      phone
+      position
+      status
+      photoUrl
+    }
+  }
+}
+```
 
-"phone_number": "+6281234567890",
+**Success Response:**
 
-"position": "Homeroom Teacher",
-
-
-"phone_number": "+6281234567890",
-
-"gender": "male",
-
-"birth_place": "Bandung",
-
-"birth_date": "1990-05-10",
-
-"address": "Jl. Merdeka No. 10, Bandung",
-
-"religion": "Islam",
-
-"nationality": "Indonesia",
-
-"marital_status": "married",
-
-"employee_number": "TCH-2026-0001",
-
-"join_date": "2026-05-24",
-
-"position": "Homeroom Teacher",
-
-"education_level": "Bachelor",
-
-"major": "Early Childhood Education",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
-
-"created_at": "2026-05-24T08:00:00Z",
-
-"updated_at": "2026-05-24T08:00:00Z"
-
-
-},
-
+```json
 {
-
-"id": "01JW4KR8Z1N9X4Y5U7P2D6E8F9",
-
-"full_name": "Jane Smith",
-
-"email": "jane.smith@example.com",
-
-"phone_number": "+6281122233344",
-
-"position": "Assistant Teacher",
-
-
-"phone_number": "+6281234567890",
-
-"gender": "male",
-
-"birth_place": "Bandung",
-
-"birth_date": "1990-05-10",
-
-"address": "Jl. Merdeka No. 10, Bandung",
-
-"religion": "Islam",
-
-"nationality": "Indonesia",
-
-"marital_status": "married",
-
-"employee_number": "TCH-2026-0001",
-
-"join_date": "2026-05-24",
-
-"position": "Homeroom Teacher",
-
-"education_level": "Bachelor",
-
-"major": "Early Childhood Education",
-
-"status": "active",
-
-"photo_url": "https://cdn.example.com/teachers/john-doe.jpg",
-
-"created_at": "2026-05-24T08:00:00Z",
-
-"updated_at": "2026-05-24T08:00:00Z"
-
-
+  "data": {
+    "getTeachersAll": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "email": "john.doe@example.com",
+        "profile": {
+          "firstName": "John",
+          "lastName": "Doe",
+          "phone": "+6281234567890",
+          "position": "Homeroom Teacher",
+          "status": "active",
+          "photoUrl": "https://cdn.example.com/teachers/john-doe.jpg"
+        }
+      },
+      {
+        "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "email": "jane.smith@example.com",
+        "profile": {
+          "firstName": "Jane",
+          "lastName": "Smith",
+          "phone": "+6281299988877",
+          "position": "Assistant Teacher",
+          "status": "active",
+          "photoUrl": "https://cdn.example.com/teachers/jane-smith.jpg"
+        }
+      }
+    ]
+  }
 }
+```
 
-],
+---
 
-"pagination": {
+### **7. Get List Teachers Pagination (Query)**
 
-"page": 1,
-
-"limit": 10,
-
-"total_items": 25,
-
-"total_pages": 3,
-
-"has_next_page": true,
-
-"has_previous_page": false
-
+```graphql
+query GetTeachersPagination($page: Int!, $limit: Int!, $search: String) {
+  getTeachersPagination(page: $page, limit: $limit, search: $search) {
+    items {
+      id
+      email
+      profile {
+        firstName
+        lastName
+        phone
+        position
+        status
+        photoUrl
+      }
+    }
+    pagination {
+      page
+      limit
+      totalItems
+      totalPages
+      hasNextPage
+      hasPreviousPage
+    }
+  }
 }
+```
 
+**Variables:**
+
+```json
+{
+  "page": 1,
+  "limit": 10,
+  "search": "John"
 }
+```
 
+**Success Response:**
+
+```json
+{
+  "data": {
+    "getTeachersPagination": {
+      "items": [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "email": "john.doe@example.com",
+          "profile": {
+            "firstName": "John",
+            "lastName": "Doe",
+            "phone": "+6281234567890",
+            "position": "Homeroom Teacher",
+            "status": "active",
+            "photoUrl": "https://cdn.example.com/teachers/john-doe.jpg"
+          }
+        },
+        {
+          "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+          "email": "jane.smith@example.com",
+          "profile": {
+            "firstName": "Jane",
+            "lastName": "Smith",
+            "phone": "+6281299988877",
+            "position": "Assistant Teacher",
+            "status": "active",
+            "photoUrl": "https://cdn.example.com/teachers/jane-smith.jpg"
+          }
+        }
+      ],
+      "pagination": {
+        "page": 1,
+        "limit": 10,
+        "totalItems": 25,
+        "totalPages": 3,
+        "hasNextPage": true,
+        "hasPreviousPage": false
+      }
+    }
+  }
 }
+```
 
-# Global Front end Rules
+---
+
+# Global Frontend Rules
 
 ## State Management
 
-- TanStack Query for API state
-- TanStack Store for global UI state
-- local state for forms only
+- TanStack Query for API state (server state)
+- TanStack Store for global UI state (auth, theme, active academic year, selected class)
+- Local state for forms only
 
 ## Components
 
-- reusable first
-- Use component from solid-ui first
-    - accessibility required
-- mobile-first
+- Reusable first
+- Use components from Solid UI / Kobalte first
+  - Accessibility required
+- Mobile-first
 
 ## API
 
-- never call fetch directly
-- use centralized API client
+- Never call fetch directly
+- Use centralized API client (GraphQL client for CRUD, REST client for auth/media)

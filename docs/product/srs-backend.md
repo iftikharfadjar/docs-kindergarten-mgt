@@ -42,9 +42,11 @@ The backend system encompasses data modeling, user authentication, media storage
 
 ### 2.2 Core Architectural Decisions
 
-* **Academic Year Root:** The system uses the `AcademicYear` as the root configuration entity. All classes, enrollments, and skill configurations cascade from this to prevent data bleeding between years.
+* **Academic Year Root:** The system uses the `AcademicYear` as the root configuration entity. All classes, enrollments, and skill configurations cascade from this to prevent data bleeding between years. Academic Years follow a 4-state lifecycle: DRAFT → ACTIVE → CLOSED → ARCHIVED. Creating an Academic Year automatically generates 2 semesters.
+* **Teacher Multi-Class Support:** Teachers can be assigned to multiple classes simultaneously within an academic year.
 * **Soft Deletes & Auditability:** All core entities utilize `deleted_at` for soft deletion to preserve historical integrity. Critical entities track `created_by` and `updated_by` for strict audit trails.
 * **Parent Registration (Two Modes):** 1) Legacy code-based: parents use an Admin-generated `unique_registration_code` to link to a pre-existing student. 2) Self-service: parents create their account, register their child, and submit for admin review (student created in `PENDING` status).
+* **Student Status Lifecycle:** Students transition from PENDING → ACTIVE/REJECTED → ARCHIVED. Rejected students can be resubmitted (→ PENDING). Archived is a final state.
 
 ---
 
@@ -59,6 +61,8 @@ erDiagram
     Users ||--o{ ParentStudentLinks : "parent linked via"
     Users ||--o{ TeacherAssignments : "teacher assigned via"
     Users ||--o{ MediaAssets : "uploads"
+    Users ||--o{ DeviceTokens : "registers"
+    Users ||--o{ Notifications : "receives"
 
     AcademicYears ||--o{ Classes : "configures"
     AcademicYears ||--o{ SkillCategories : "configures"
@@ -112,6 +116,20 @@ erDiagram
         string first_name
         string last_name
         string phone
+        string gender "nullable"
+        string birth_place "nullable"
+        date birth_date "nullable"
+        string address "nullable"
+        string religion "nullable"
+        string nationality "nullable"
+        string marital_status "nullable"
+        string employee_number "nullable"
+        date join_date "nullable"
+        string position "nullable"
+        string education_level "nullable"
+        string major "nullable"
+        string status "nullable"
+        string photo_url "nullable"
         datetime created_at
         datetime updated_at
     }
@@ -121,7 +139,7 @@ erDiagram
         string name
         date start_date
         date end_date
-        boolean is_active
+        string status "DRAFT, ACTIVE, CLOSED, ARCHIVED"
         datetime created_at
         datetime updated_at
         datetime deleted_at "Soft Delete"
@@ -278,6 +296,26 @@ erDiagram
         datetime created_at
     }
 
+    DeviceTokens {
+        uuid id PK
+        uuid user_id FK
+        string fcm_token
+        string device_name
+        datetime created_at
+        datetime updated_at
+    }
+
+    Notifications {
+        uuid id PK
+        uuid user_id FK
+        string title
+        text body
+        string type
+        boolean is_read
+        string entity_type "nullable"
+        uuid entity_id "nullable"
+        datetime created_at
+    }
 ```
 
 ---
@@ -300,8 +338,33 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
     "user": { "id": "usr-123", "role": "TEACHER", "firstName": "Jane", "lastName": "Doe" }
   }
 }
-
 ```
+
+* **Endpoint:** `POST /api/v1/auth/refresh`
+* **Behavior:** Uses the Secure HttpOnly refresh token cookie to issue a new Access Token.
+* **Response (200 OK):**
+```json
+{
+  "status": "success",
+  "data": { "accessToken": "eyJhbGciOiJIUzI1..." }
+}
+```
+
+* **Endpoint:** `POST /api/v1/auth/logout`
+* **Behavior:** Invalidates the refresh token in the DB and clears the HttpOnly cookie.
+* **Response (200 OK):**
+```json
+{
+  "status": "success",
+  "data": null
+}
+```
+
+* **Endpoint:** `POST /api/v1/auth/forgot-password`
+* **Behavior:** Initiates the password reset flow by sending an email with a reset token.
+
+* **Endpoint:** `POST /api/v1/auth/reset-password`
+* **Behavior:** Resets the password using the token provided via email.
 
 
 
@@ -317,7 +380,20 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
   "status": "success",
   "data": { "mediaAssetId": "media-999", "url": "https://s3.bucket.url/daily_reports/photo1.jpg" }
 }
+```
 
+### 4.3 Notifications Service
+
+* **Endpoint:** `POST /api/v1/notifications/register-device`
+* **Headers:** `Authorization: Bearer <token>`
+* **Behavior:** Registers an FCM device token for the authenticated user to receive push notifications.
+* **Request:** `{ "fcmToken": "eXamPleT0k3n...", "deviceName": "iPhone 14" }`
+* **Response (200 OK):**
+```json
+{
+  "status": "success",
+  "data": null
+}
 ```
 
 
@@ -370,7 +446,11 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
 
 * **Request:** `mutation UpdateStudent($studentId: ID!, $input: UpdateStudentInput!) { updateStudent(studentId: $studentId, input: $input) { id firstName lastName dob status } }`
 
-**Delete Student (Soft Delete)**
+**Resubmit Student (Admin — REJECTED → PENDING)**
+
+* **Request:** `mutation ResubmitStudent($studentId: ID!) { resubmitStudent(studentId: $studentId) { id status } }`
+
+**Delete Student (Soft Delete — ARCHIVED is final state)**
 
 * **Request:** `mutation SoftDeleteStudent($studentId: ID!) { softDeleteStudent(studentId: $studentId) { success } }`
 
@@ -403,17 +483,21 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
 
 ### 5.3 Academic Year & Class Setup
 
-**Create Academic Year (Creates in Inactive State — Admin)**
+**Create Academic Year (Creates in DRAFT State + Auto-creates 2 Semesters — Admin)**
 
-* **Request:** `mutation CreateAcademicYear($input: CreateAcademicYearInput!) { createAcademicYear(input: $input) { id name startDate endDate isActive } }`
+* **Request:** `mutation CreateAcademicYear($input: CreateAcademicYearInput!) { createAcademicYear(input: $input) { id name startDate endDate status } }`
 
 **Get All Academic Years (List Active & Inactive)**
 
-* **Request:** `query GetAcademicYears { getAcademicYears { id name startDate endDate isActive } }`
+* **Request:** `query GetAcademicYears { getAcademicYears { id name startDate endDate status } }`
 
 **Get Comprehensive Academic Year Data**
 
-* **Request:** `query GetAcademicYearCompleteData($academicYearId: ID!) { getAcademicYear(id: $academicYearId) { id name startDate endDate isActive classes { id name capacity teacherAssignment { id assignedDate teacher { id profile { firstName lastName } } } enrollments { id enrolledDate student { id firstName lastName uniqueRegistrationCode } } } skillCategories { id name description skills { id name description } } } }`
+* **Request:** `query GetAcademicYearCompleteData($academicYearId: ID!) { getAcademicYear(id: $academicYearId) { id name startDate endDate status classes { id name capacity teacherAssignment { id assignedDate teacher { id profile { firstName lastName } } } enrollments { id enrolledDate student { id firstName lastName uniqueRegistrationCode } } } skillCategories { id name description skills { id name description } } } }`
+
+**Get Academic Year By ID**
+
+* **Request:** `query GetAcademicYear($id: ID!) { getAcademicYear(id: $id) { id name startDate endDate status } }`
 
 **Create Class (Admin — Optional Academic Year Link)**
 
@@ -423,9 +507,21 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
 
 * **Request:** `mutation BulkSetupAcademicYear($academicYearId: ID!, $input: BulkSetupInput!) { bulkSetupAcademicYear(academicYearId: $academicYearId, input: $input) { success message classesCreated skillsCreated totalStudentsEnrolled } }`
 
+**Clone Academic Year (Clones classes, skills, and categories from previous year)**
+
+* **Request:** `mutation CloneAcademicYear($sourceYearId: ID!, $targetYearId: ID!) { cloneAcademicYear(sourceYearId: $sourceYearId, targetYearId: $targetYearId) { success classesCreated skillsCreated } }`
+
 **Update Academic Year**
 
-* **Request:** `mutation UpdateAcademicYear($id: ID!, $input: UpdateAcademicYearInput!) { updateAcademicYear(id: $id, input: $input) { id isActive } }`
+* **Request:** `mutation UpdateAcademicYear($id: ID!, $input: UpdateAcademicYearInput!) { updateAcademicYear(id: $id, input: $input) { id status } }`
+
+**Set Academic Year Status**
+
+* **Request:** `mutation SetAcademicYearStatus($id: ID!, $status: String!) { setAcademicYearStatus(id: $id, status: $status) { id status } }`
+
+**Delete Academic Year (Soft Delete)**
+
+* **Request:** `mutation DeleteAcademicYear($id: ID!) { deleteAcademicYear(id: $id) { success } }`
 
 **Get Classes (By Academic Year)**
 
@@ -473,9 +569,17 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
 
 * **Request:** `mutation MarkAttendance($classId: ID!, $records: [AttendanceRecordInput!]!) { markDailyAttendance(classId: $classId, records: $records) { success date submittedBy } }`
 
+**Update Attendance**
+
+* **Request:** `mutation UpdateAttendance($attendanceId: ID!, $status: String!, $remarks: String) { updateAttendance(attendanceId: $attendanceId, status: $status, remarks: $remarks) { id status } }`
+
 **Get Attendance by Class & Date**
 
 * **Request:** `query GetClassAttendance($classId: ID!, $date: Date!) { getClassAttendance(classId: $classId, date: $date) { id student { id firstName } status remarks } }`
+
+**Get Attendance By Student And Date Range**
+
+* **Request:** `query GetAttendanceByStudentAndDateRange($studentId: ID!, $startDate: Date!, $endDate: Date!) { getAttendanceByStudentAndDateRange(studentId: $studentId, startDate: $startDate, endDate: $endDate) { id date status } }`
 
 **Get Student Attendance (Parent)**
 * **Request:** `query GetStudentAttendance($studentId: ID!, $academicYearId: ID!) { getStudentAttendance(studentId: $studentId, academicYearId: $academicYearId) { id date status remarks class { id name } } }`
@@ -546,7 +650,40 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
 
 * **Request:** `query GetSemesterReportsActive($studentId: ID!, $academicYearId: ID!) { getSemesterReportsActive(studentId: $studentId, academicYearId: $academicYearId) { semesterId status student { id firstName lastName } class { id name } attendanceCounts { present absent excused late } skillAverages { skillId skillName totalScore count average } } }`
 
-### 5.7 Parent Monitoring & Access Control
+### 5.7 Analytics & Dashboards
+
+**Get Attendance Analytics (By class/academic year)**
+* **Request:** `query GetAttendanceAnalytics($academicYearId: ID!, $classId: ID) { getAttendanceAnalytics(academicYearId: $academicYearId, classId: $classId) { presentRate absentRate } }`
+
+**Get Assessment Completion Analytics**
+* **Request:** `query GetAssessmentCompletionAnalytics($academicYearId: ID!) { getAssessmentCompletionAnalytics(academicYearId: $academicYearId) { completionPercentage } }`
+
+**Get Student Progress Summary**
+* **Request:** `query GetStudentProgressSummary($studentId: ID!, $academicYearId: ID!) { getStudentProgressSummary(studentId: $studentId, academicYearId: $academicYearId) { totalSkills assessedSkills } }`
+
+**Get Teacher Activity Summary**
+* **Request:** `query GetTeacherActivitySummary($teacherId: ID!, $academicYearId: ID!) { getTeacherActivitySummary(teacherId: $teacherId, academicYearId: $academicYearId) { attendanceMarked reportsSubmitted } }`
+
+### 5.8 Notifications (GraphQL CRUD)
+
+**Get Notifications (Paginated)**
+* **Request:** `query GetNotifications($limit: Int, $offset: Int) { getNotifications(limit: $limit, offset: $offset) { items { id title body isRead } totalCount } }`
+
+**Mark Notification Read**
+* **Request:** `mutation MarkNotificationRead($id: ID!) { markNotificationRead(id: $id) { id isRead } }`
+
+**Mark All Notifications Read**
+* **Request:** `mutation MarkAllNotificationsRead { markAllNotificationsRead { success } }`
+
+### 5.9 Student Promotion
+
+**Promote Students (Bulk promote to next class)**
+* **Request:** `mutation PromoteStudents($input: PromoteStudentsInput!) { promoteStudents(input: $input) { success promotedCount } }`
+
+**Get Promotion Preview**
+* **Request:** `query GetPromotionPreview($sourceClassId: ID!) { getPromotionPreview(sourceClassId: $sourceClassId) { eligibleStudents { id firstName lastName } } }`
+
+### 5.10 Parent Monitoring & Access Control
 
 **JWT GraphQL Middleware**
 
@@ -564,7 +701,7 @@ Every resolver that accesses student-scoped data MUST check the caller's role:
 | Role | Behavior |
 |------|----------|
 | ADMIN | Full access — no student-parent validation performed |
-| TEACHER | Full access — no student-parent validation performed |
+| TEACHER | Read access to all classes. Write access restricted to assigned classes only (validated via `teacher_assignments` table). |
 | PARENT | Restricted — must validate student belongs to parent via `parent_student_links` and student status is `APPROVED` |
 
 **Protected Queries (Parent Role)**
@@ -573,6 +710,8 @@ The following existing queries enforce parent-child access isolation when called
 * `getStudentAssessments(studentId, academicYearId)` — validated
 * `getSemesterReportsPagination(studentId, academicYearId)` — validated
 * `getSemesterReportsActive(studentId, academicYearId)` — validated
+* `getStudentAttendance(studentId, academicYearId)` — validated
+* `getDailyReports(classId, limit, offset)` — validated
 
 If a parent attempts to access a student that is not linked and APPROVED, the resolver returns a **403 Forbidden** error.
 
@@ -612,3 +751,15 @@ getStudentAttendance(studentId: ID!, academicYearId: ID!): [AttendanceRecord!]!
 
 4. **Notifications:**
 * FCM notification triggers (like `SubmitDailyReport`) must not block the main HTTP response thread. They should be offloaded to a background worker queue (e.g., RabbitMQ, Redis tasks, or Go Goroutines).
+
+5. **Rate Limiting:**
+* API endpoints, especially login and GraphQL queries, must be protected by rate limiting to prevent brute force and DDoS attacks. GraphQL must have query complexity limits.
+
+6. **CORS Policy:**
+* The backend must be configured with a strict CORS policy allowing requests only from the verified frontend domains.
+
+7. **Data Privacy:**
+* As the system handles data for minors, strict data privacy controls and adherence to relevant data protection regulations (e.g. GDPR equivalent) are mandatory.
+
+8. **Database Migrations:**
+* All database schema changes must be managed via a migration tool (e.g., golang-migrate) to ensure versioned, reproducible deployments.

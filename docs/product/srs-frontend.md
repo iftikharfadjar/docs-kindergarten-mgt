@@ -62,7 +62,7 @@ The frontend system must support:
 * Responsive web interface
 * Desktop-first administration workflows
 * Mobile-friendly parent dashboards
-* Real-time data synchronization
+* Periodic data synchronization via polling
 * Offline-friendly form handling
 * Role-based access control
 
@@ -181,6 +181,7 @@ src/
 | Route                       | Description           |
 | --------------------------- | --------------------- |
 | `/teacher/dashboard`        | Teacher dashboard     |
+| `/teacher/classes`          | Class selection (multi-class support) |
 | `/teacher/attendance`       | Attendance management |
 | `/teacher/assessments`      | Assessment management |
 | `/teacher/daily-reports`    | Daily reports         |
@@ -223,7 +224,7 @@ Frontend must implement RBAC:
 | Role    | Permissions              |
 | ------- | ------------------------ |
 | Admin   | Full access              |
-| Teacher | Classroom-related access |
+| Teacher | Read all classes, write assigned classes only |
 | Parent  | Read-only child access   |
 
 Unauthorized routes must redirect users.
@@ -245,18 +246,20 @@ Unauthorized routes must redirect users.
 | Promote Students          | ✅     | ❌       | ❌      |
 | Manage Skill Categories   | ✅     | Limited | ❌      |
 | Manage Skills             | ✅     | Limited | ❌      |
-| Mark Attendance           | ✅     | ✅       | ❌      |
-| View Attendance           | ✅     | ✅       | ✅      |
-| Create Assessments        | ❌     | ✅       | ❌      |
-| View Assessments          | ✅     | ✅       | ✅      |
-| Create Daily Reports      | ❌     | ✅       | ❌      |
-| View Daily Reports        | ✅     | ✅       | ✅      |
-| Upload Classroom Photos   | ❌     | ✅       | ❌      |
-| Generate Semester Reports | ❌     | ✅       | ❌      |
-| View Semester Reports     | ✅     | ✅       | ✅      |
+| Mark Attendance           | ✅     | ✅ (assigned)| ❌      |
+| View Attendance           | ✅     | ✅ (all)     | ✅      |
+| Create Assessments        | ❌     | ✅ (assigned)| ❌      |
+| View Assessments          | ✅     | ✅ (all)     | ✅      |
+| Create Daily Reports      | ❌     | ✅ (assigned)| ❌      |
+| View Daily Reports        | ✅     | ✅ (all)     | ✅      |
+| Upload Classroom Photos   | ❌     | ✅ (assigned)| ❌      |
+| Generate Semester Reports | ❌     | ✅ (assigned)| ❌      |
+| View Semester Reports     | ✅     | ✅ (all)     | ✅      |
 | Export Reports            | ✅     | ✅       | ✅      |
 | View Analytics Dashboard  | ✅     | Limited | ❌      |
 | Receive Notifications     | ✅     | ✅       | ✅      |
+| Resubmit Rejected Student | ✅     | ❌       | ❌      |
+| Close Academic Year       | ✅     | ❌       | ❌      |
 
 
 ---
@@ -275,6 +278,8 @@ Unauthorized routes must redirect users.
 | FE-AUTH-004 | User can reset password        |
 | FE-AUTH-005 | System stores token securely   |
 | FE-AUTH-006 | System protects private routes |
+| FE-AUTH-007 | Parent can register new account with child (self-service) |
+| FE-AUTH-008 | System handles multi-class teacher dashboard |
 
 ---
 
@@ -285,11 +290,13 @@ Based on PRD academic year workflows.
 | ID        | Requirement                           |
 | --------- | ------------------------------------- |
 | FE-AY-001 | Admin can create academic year        |
-| FE-AY-002 | Admin can activate academic year      |
+| FE-AY-002 | Admin can activate academic year (4 states: DRAFT/ACTIVE/CLOSED/ARCHIVED) |
 | FE-AY-003 | Admin can archive academic year       |
 | FE-AY-004 | Admin can clone academic year         |
 | FE-AY-005 | System displays active academic year  |
 | FE-AY-006 | System validates only one active year |
+| FE-AY-007 | Admin can close academic year         |
+| FE-AY-008 | System auto-creates 2 semesters when academic year is created |
 
 ---
 
@@ -315,6 +322,8 @@ Based on PRD academic year workflows.
 | FE-STUDENT-003 | Admin can promote student  |
 | FE-STUDENT-004 | Admin can archive student  |
 | FE-STUDENT-005 | Parent can register child  |
+| FE-STUDENT-006 | Admin can resubmit rejected registration |
+| FE-STUDENT-007 | System shows student status transitions |
 
 ---
 
@@ -349,8 +358,8 @@ Based on PRD academic year workflows.
 | FE-REPORT-001 | Teacher can create daily report     |
 | FE-REPORT-002 | Teacher can upload classroom photos |
 | FE-REPORT-003 | Parent can view daily reports       |
-| FE-REPORT-004 | Parent can view weekly reports      |
-| FE-REPORT-005 | Parent can view monthly reports     |
+| FE-REPORT-004 | Parent can view weekly reports (client-side aggregation) |
+| FE-REPORT-005 | Parent can view monthly reports (client-side aggregation) |
 
 ---
 
@@ -432,6 +441,7 @@ TanStack Store manages:
 * Theme settings
 * Notification state
 * Active academic year
+* Selected class (for multi-class teachers)
 
 ---
 
@@ -484,9 +494,9 @@ GraphQL used for:
 
 REST APIs used for:
 
+* Authentication (login, logout, refresh, password reset)
 * File upload
-* Authentication
-* Push notification registration
+* Push notification device registration
 * Report export/download
 
 ---
@@ -585,6 +595,7 @@ System must provide:
 | API cache        | TanStack Query  |
 | Attendance draft | Local storage   |
 | Form recovery    | Auto-save       |
+| Periodic sync    | TanStack Query refetching (no WebSocket) |
 | Retry requests   | Automatic retry |
 | Optimistic UI    | Supported       |
 

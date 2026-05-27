@@ -65,6 +65,8 @@ The application improves:
 ## Academic Year as Root Configuration
 
 Academic Year is the top-level academic container.
+It operates on a 4-state lifecycle: DRAFT → ACTIVE → CLOSED → ARCHIVED.
+Each academic year automatically creates 2 semesters.
 
 All academic operational data belongs to an academic year:
 - Classes
@@ -97,6 +99,7 @@ All academic operational data belongs to an academic year:
 ### Academic Year Management
 - Create academic years
 - Activate/deactivate academic years
+- Close academic years
 - Archive academic years
 - Clone previous academic year configuration
 
@@ -108,7 +111,7 @@ All academic operational data belongs to an academic year:
 
 ### Teacher Management
 - Add teacher profiles
-- Assign teachers to classes
+- Assign teachers to classes (teachers can be assigned to multiple classes)
 - Reassign teachers yearly
 - View teacher activity
 
@@ -116,7 +119,8 @@ All academic operational data belongs to an academic year:
 - Enroll students
 - Transfer students
 - Promote students automatically
-- Archive students
+- Resubmit rejected students
+- Archive students (Final state)
 
 ### Skill Category Management
 - Create skill categories
@@ -135,12 +139,14 @@ All academic operational data belongs to an academic year:
 ## Teacher Module
 
 ### Attendance Management
-- Mark daily attendance
+- Mark daily attendance (assigned classes only)
 - Add remarks
+- View attendance (any class)
 
 ### Assessment Management
-- Input skill assessments
+- Input skill assessments (assigned classes only)
 - Add assessment notes
+- View assessments (any class)
 
 ### Daily Reports
 - Create daily reports
@@ -199,7 +205,10 @@ Configure Skill Categories
 Configure Skills
       │
       ▼
-Academic Year Ready
+Auto-create Semesters
+      │
+      ▼
+Academic Year Ready (Active)
 ```
 
 ---
@@ -225,12 +234,15 @@ Admin Reviews Registration
  │             │
  ▼             ▼
 Rejected    Approved
-                  │
-                  ▼
-      Assign Academic Year & Class
-                  │
-                  ▼
-         Student Activated
+  │               │
+  │               ▼
+  │     Assign Academic Year & Class
+  │               │
+  │               ▼
+  │        Student Activated
+  ▼
+Can be resubmitted
+to PENDING
 ```
 
 ---
@@ -290,7 +302,7 @@ Parent Views Semester Report
 # 6.5 Student Promotion Workflow
 
 ```text id="promotion-workflow"
-Academic Year Ends
+Academic Year Ends (CLOSED state)
         │
         ▼
 System Evaluates Promotion Rules
@@ -371,16 +383,20 @@ View Historical Academic Records
 | FR-023 | System supports automated student promotion |
 | FR-024 | System provides analytics dashboard |
 | FR-025 | Teacher can generate semester reports |
+| FR-026 | System auto-creates 2 semesters per academic year |
+| FR-027 | Admin can close academic year |
+| FR-028 | Admin can resubmit rejected student registration |
+| FR-029 | System supports token refresh |
+| FR-030 | User can reset password via email |
 
 # 8. Database Design
 
 ## Core Entities
 - Users
 - Roles
+- Profiles
 - AcademicYears
 - Classes
-- Teachers
-- Parents
 - Students
 - StudentEnrollments
 - TeacherAssignments
@@ -390,8 +406,10 @@ View Historical Academic Records
 - Attendance
 - DailyReports
 - SemesterReports
-- StudentPhotos
+- MediaAssets
 - Semesters
+- Notifications
+- DeviceTokens
 
 # 9. Suggested Tech Stack
 
@@ -406,11 +424,13 @@ View Historical Academic Records
 
 ## Backend
 - Go
-- GraphQL API
-- REST API
+- Hybrid API (GraphQL for CRUD, REST for auth/media)
 
 ## Database
 - PostgreSQL
+
+## Storage
+- AWS S3 or MinIO
 
 ## Authentication
 - JWT
@@ -422,7 +442,7 @@ View Historical Academic Records
 # 10. MVP / Phase 1 Scope
 
 Included:
-- Authentication
+- Authentication (Login, Logout, Refresh, Password Reset)
 - Academic year management
 - User & role management
 - Parent registration
