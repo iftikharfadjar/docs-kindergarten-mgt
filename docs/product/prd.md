@@ -162,7 +162,7 @@ All academic operational data belongs to an academic year:
 ### Parent Registration
 - Register accounts
 - Register children
-- Upload required documents
+- Upload required documents (future enhancement; not included in MVP)
 
 ### Progress Monitoring
 - View attendance
@@ -171,9 +171,7 @@ All academic operational data belongs to an academic year:
 - View historical academic records
 
 ### Push Notifications
-- Attendance updates
-- Daily report submissions
-- Semester report availability
+- Semester report availability only in MVP
 
 ---
 
@@ -222,7 +220,7 @@ Parent Creates Account
 Register Child Information
         │
         ▼
-Upload Documents
+Skip document upload in MVP
         │
         ▼
 Submit Registration
@@ -233,7 +231,7 @@ Admin Reviews Registration
  ┌──────┴──────┐
  │             │
  ▼             ▼
-Rejected    Approved
+Rejected    Active
   │               │
   │               ▼
   │     Assign Academic Year & Class
@@ -430,7 +428,7 @@ View Historical Academic Records
 - PostgreSQL
 
 ## Storage
-- AWS S3 or MinIO
+- Private MinIO object storage
 
 ## Authentication
 - JWT
@@ -446,6 +444,7 @@ Included:
 - Academic year management
 - User & role management
 - Parent registration
+- Parent registration document upload is excluded from MVP
 - Class management
 - Teacher assignment
 - Student enrollment

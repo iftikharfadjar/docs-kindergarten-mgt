@@ -1,9 +1,9 @@
 # Notification Management Workflow
 
 ## 1. Overview
-This workflow describes how the system creates, stores, sends, reads, and manages notifications across Admin, Teacher, and Parent roles. Notifications support both in-app notification lists and push notifications through Firebase Cloud Messaging (FCM).
+This workflow describes how the system creates, stores, sends, reads, and manages notifications across Admin, Teacher, and Parent roles. Notifications support in-app notification lists. Push notifications through Firebase Cloud Messaging (FCM) are sent to parents only when semester reports are published in MVP.
 
-The backend creates notification records when important events happen, such as attendance updates, daily report publication, semester report publication, registration approval/rejection, and student enrollment. Push sending must be asynchronous and must not block the main mutation response.
+The backend creates notification records when important events happen, such as attendance updates, daily report publication, semester report publication, registration approval/rejection, and student enrollment. For MVP, FCM push sending is limited to semester report publication and must be asynchronous.
 
 ## 2. API / GraphQL and REST List
 The following operations are utilized in this workflow:
@@ -48,7 +48,8 @@ sequenceDiagram
     API->>DB: Find linked parent users
     API->>DB: INSERT Notifications for parents
     API-->>Frontend: Return daily report success
-    API->>FCM: Send push notification asynchronously
+    API-->>Frontend: Return daily report success
+    Note over API,FCM: No parent push for daily reports in MVP
 
     Parent->>Frontend: Opens notification list
     Frontend->>API: query GetNotifications(limit, offset)
@@ -81,6 +82,7 @@ sequenceDiagram
 4. **Device Registration**
    - After login, frontend requests browser notification permission.
    - If permission is granted, frontend registers the FCM token through REST.
+   - The registered token is used for semester report published push notifications.
 
 ## 6. UI Wireframe
 

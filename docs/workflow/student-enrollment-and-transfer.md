@@ -1,7 +1,7 @@
 # Student Enrollment & Transfer Workflow
 
 ## 1. Overview
-This workflow describes how an Admin enrolls an `ACTIVE` student into a class, transfers a student between classes, unenrolls a student, and preserves enrollment history. Enrollment links a student to a class, and the class determines the academic-year scope.
+This workflow describes how an Admin enrolls an `ACTIVE` student into a class, transfers a student between classes in the same academic year, unenrolls a student, and preserves enrollment history. Enrollment links a student to a class, and the class determines the academic-year scope.
 
 Students from parent self-service registration must be reviewed and set to `ACTIVE` before enrollment. The system must not use `APPROVED` as a student status.
 
@@ -52,6 +52,7 @@ sequenceDiagram
 
     Admin->>Frontend: Transfers student to another class
     Frontend->>API: mutation TransferStudent(input)
+    API->>DB: Validate source and target classes are in the same academic year
     API->>DB: Soft delete current active enrollment
     API->>DB: Insert new enrollment for target class
     API-->>Frontend: Return transfer result
@@ -71,6 +72,7 @@ sequenceDiagram
 3. **Transfer Student**
    - Admin selects an enrolled student.
    - Admin selects a target class in the same academic year.
+   - Cross-year movement must use the Student Promotion workflow, not transfer.
    - System closes the old enrollment and creates a new enrollment.
 
 4. **Unenroll Student**

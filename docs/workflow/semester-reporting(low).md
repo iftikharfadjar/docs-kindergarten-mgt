@@ -3,7 +3,7 @@
 ## 1. Context & Business Rules (Explicit Constraints)
 - **Constraint 1 (Live vs Stored Data):** The backend provides two different queries. `GetSemesterReportsActive` computes everything on-the-fly based on current DB records for the active semester. `GetSemesterReportsPagination` returns data for reports that have already been created (Draft or Published).
 - **Constraint 2 (Idempotency):** A student can only have ONE `SemesterReport` per `semesterId`. If `CreateSemesterReport` is called when one already exists, the backend should either reject it or update it.
-- **Constraint 3 (State Machine):** The report status transitions from `DRAFT` to `PUBLISHED` (and optionally `APPROVED` if an admin review step is enforced by the school).
+- **Constraint 3 (State Machine):** The report status transitions from `DRAFT` to `PUBLISHED` only. There is no Admin approval step in MVP.
 - **Constraint 4 (Access Control):** Parents can ONLY view reports where `status == "PUBLISHED"`. Teachers and Admins can view `DRAFT`. The backend GraphQL middleware enforces this.
 
 ## 2. Exact Data Contracts (GraphQL)

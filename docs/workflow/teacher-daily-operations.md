@@ -11,7 +11,7 @@ The following queries, mutations, and REST endpoints are utilized in this workfl
 - `mutation MarkAttendance` - Submits batch attendance records for the class.
 - `mutation UpdateAttendance` - Updates an individual student's attendance if a mistake was made.
 - `mutation CreateDailyReport` - Submits the text summary of the day's activities.
-- `POST /api/v1/media/upload` (REST) - Uploads photos to the backend/S3 and returns a media asset ID to link to the daily report.
+- `POST /api/v1/media/upload` (REST) - Uploads photos to private MinIO storage and returns a media asset ID plus authorized private/signed URL to link to the daily report.
 
 ## 3. Domain / Table List
 The workflow interacts with the following database tables:

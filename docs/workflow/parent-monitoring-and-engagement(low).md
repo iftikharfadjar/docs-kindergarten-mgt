@@ -11,7 +11,8 @@
 - **Constraint 8 (Notification Creation):** Backend creates notification records when teacher/admin actions happen. Parent only reads and marks notifications as read.
 - **Constraint 9 (Push Async Rule):** Sending FCM push notifications MUST NOT block the GraphQL mutation response. It should run asynchronously.
 - **Constraint 10 (Media URLs):** Daily report photos are stored through MinIO upload flow and displayed to Parent using returned media URLs from `MediaAssets`.
-- **Constraint 11 (Strict CRUD Rule):** Notification and monitoring-related domains must still follow the global 7-operation GraphQL CRUD rule where applicable: create, update, delete by id, delete multiple ids, get by id, get all, get pagination.
+- **Constraint 11 (Parent Push Scope):** Parent push notifications are sent only for `SEMESTER_REPORT_PUBLISHED` in MVP. Attendance and daily report updates can be in-app notifications only.
+- **Constraint 12 (Strict CRUD Rule):** Notification and monitoring-related domains must still follow the global 7-operation GraphQL CRUD rule where applicable: create, update, delete by id, delete multiple ids, get by id, get all, get pagination.
 
 ## 2. Exact Data Contracts (GraphQL & REST)
 
@@ -329,11 +330,15 @@ sequenceDiagram
     API-->>GQL: Returns reports with media URLs
     GQL-->>UI: Render <DailyReportFeed />
 
-    %% Notification produced by teacher report
+    %% In-app notification produced by teacher report
     API->>API: Teacher creates daily report
-    API->>API: Create Notification rows for linked parents
-    API->>FCM: Send push notification asynchronously
-    FCM-->>Parent: Browser receives push notification
+    API->>API: Create in-app Notification rows for linked parents
+
+    %% Push notification produced by semester report publish
+    API->>API: Teacher publishes semester report
+    API->>API: Create Notification row for linked parent
+    API->>FCM: Send semester report push notification asynchronously
+    FCM-->>Parent: Browser receives semester report push notification
 
     %% Read notification
     Parent->>UI: Click notification item
@@ -486,7 +491,7 @@ Use this checklist when implementing the workflow:
    - daily report created
    - semester report published
 
-9. Send FCM push asynchronously:
+9. Send FCM push asynchronously only for semester report published:
    - do not block mutation response
    - still create Notifications row even if FCM send fails
 
@@ -512,5 +517,5 @@ Use this checklist when implementing the workflow:
     Teacher marks attendance -> Parent sees attendance.
     Teacher creates daily report with MinIO photos -> Parent sees report and photos.
     Backend creates notification -> Parent sees unread badge.
-    Browser receives push notification -> Parent opens notification -> notification becomes read.
+    Semester report published -> Browser receives push notification -> Parent opens notification -> notification becomes read.
 ```

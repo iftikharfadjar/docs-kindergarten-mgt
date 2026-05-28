@@ -23,7 +23,7 @@ The following GraphQL queries and mutations are utilized in this workflow:
 - `query GetPendingRegistrations` - Allows Admin to list child registrations waiting for review.
 - `query GetRegistrationById` - Allows Admin to inspect the full child and parent details before review.
 - `mutation ReviewParentRegistration` - Allows Admin to approve or reject a child registration. Approval sets student status to `ACTIVE`; rejection sets status to `REJECTED`.
-- `mutation EnrollStudent` - Allows Admin to assign an approved child to a class in an academic year.
+- `mutation EnrollStudent` - Allows Admin to assign an `ACTIVE` child to a class in an academic year.
 
 ## 3. Domain / Table List
 The workflow interacts with the following database tables:
@@ -33,8 +33,8 @@ The workflow interacts with the following database tables:
 - `Students` - Stores child data and registration status.
 - `ParentStudentLinks` - Links the parent user to the child.
 - `AcademicYears` - Provides the academic-year scope for enrollment.
-- `Classes` - Provides the target class for approved children.
-- `StudentEnrollments` - Stores the approved child's class placement.
+- `Classes` - Provides the target class for `ACTIVE` children.
+- `StudentEnrollments` - Stores the `ACTIVE` child's class placement.
 - `Notifications` - Notifies the parent about approval, rejection, and enrollment status.
 
 ## 4. API Sequence Diagram
@@ -73,7 +73,7 @@ sequenceDiagram
     Frontend->>API: mutation EnrollStudent(classId, studentId)
     API->>DB: INSERT StudentEnrollments
     API->>DB: INSERT Notification for parent
-    API-->>Frontend: Return approved and enrolled result
+    API-->>Frontend: Return active and enrolled result
     Frontend-->>Admin: Show success
 
     %% Step 3B: Admin rejects
@@ -113,7 +113,8 @@ sequenceDiagram
 3. **Admin Pending Registrations (`/admin/students/registrations`)**
    - Admin sees all `PENDING` child registrations.
    - Admin opens a registration detail panel.
-   - Admin reviews parent profile, child information, and any submitted documents.
+   - Admin reviews parent profile and child information.
+   - Parent document upload is not included in MVP.
 
 4. **Admin Review Action**
    - Admin clicks `[Approve]` to set status to `ACTIVE`.

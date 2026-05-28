@@ -7,9 +7,10 @@
 - **Constraint 4 (No Overlap):** Semesters in the same academic year must not have overlapping date ranges.
 - **Constraint 5 (Date Containment):** Semester start and end dates should be inside the academic year start and end dates.
 - **Constraint 6 (Operational Dependency):** Attendance, assessments, daily reports, and semester reports must use a valid `semesterId`.
-- **Constraint 7 (No Active Semester):** If current date does not fall inside any semester, `getActiveSemester` returns null and write workflows should block or require Admin correction.
-- **Constraint 8 (Soft Delete Only):** Deleting a semester must set `deleted_at = NOW()`.
-- **Constraint 9 (Strict CRUD Rule):** Semester domain MUST implement create, update, delete by id, delete multiple ids, get by id, get all, and get pagination.
+- **Constraint 7 (No Active Semester):** If backend server date does not fall inside any semester, `getActiveSemester` returns null and write workflows should block or require Admin correction.
+- **Constraint 8 (Server Date Only):** `getActiveSemester` MUST use backend server date only. Do not add a date argument for MVP.
+- **Constraint 9 (Soft Delete Only):** Deleting a semester must set `deleted_at = NOW()`.
+- **Constraint 10 (Strict CRUD Rule):** Semester domain MUST implement create, update, delete by id, delete multiple ids, get by id, get all, and get pagination.
 
 ## 2. Exact Data Contracts (GraphQL)
 
@@ -134,7 +135,7 @@ query GetActiveSemester($academicYearId: ID!) {
 **Required Backend Behavior:**
 ```text
 1. Validate academicYearId exists.
-2. Use backend current date.
+2. Use backend server date only.
 3. Return semester where:
    semester.academic_year_id = academicYearId
    semester.deleted_at IS NULL
@@ -214,7 +215,7 @@ No active semester is available for today. Ask Admin to correct semester dates.
 1. Ensure CreateAcademicYear auto-creates exactly 2 semesters.
 2. Implement 7 Semester CRUD operations.
 3. Implement getActiveSemester(academicYearId).
-4. Use backend date for active semester calculation.
+4. Use backend server date for active semester calculation.
 5. Validate no overlapping semester dates.
 6. Validate semester dates are inside academic year dates.
 7. Make attendance/assessment/report creation validate semesterId.

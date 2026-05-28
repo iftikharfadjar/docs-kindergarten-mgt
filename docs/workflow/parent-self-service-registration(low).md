@@ -232,7 +232,7 @@ mutation ReviewParentRegistration($studentId: ID!, $input: ReviewRegistrationInp
   "studentId": "uuid-student",
   "input": {
     "status": "REJECTED",
-    "rejectionReason": "Birth date document does not match the entered date."
+    "rejectionReason": "Birth date needs correction."
   }
 }
 ```
@@ -326,7 +326,7 @@ sequenceDiagram
     UI->>GQL: Execute EnrollStudent(classId, studentId)
     GQL->>API: HTTP POST /query
     API-->>GQL: Returns enrollment
-    GQL-->>UI: Show approved and enrolled state
+    GQL-->>UI: Show active and enrolled state
 
     %% Reject Path
     Admin->>UI: Enter rejection reason and click Reject

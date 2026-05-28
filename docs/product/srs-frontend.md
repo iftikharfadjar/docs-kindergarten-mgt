@@ -391,8 +391,8 @@ Based on PRD academic year workflows.
 | ID           | Requirement                             |
 | ------------ | --------------------------------------- |
 | FE-NOTIF-001 | System receives push notifications      |
-| FE-NOTIF-002 | Parent receives attendance updates      |
-| FE-NOTIF-003 | Parent receives report notifications    |
+| FE-NOTIF-002 | Parent receives in-app attendance updates      |
+| FE-NOTIF-003 | Parent receives push notifications for published semester reports only |
 | FE-NOTIF-004 | Notification badge updates in real time |
 
 ---

@@ -2,14 +2,14 @@
 
 ## 1. Context & Business Rules (Explicit Constraints)
 - **Constraint 1 (REST For Upload):** File upload MUST use REST multipart endpoint. Do not upload files through GraphQL.
-- **Constraint 2 (Storage Provider):** Store files in MinIO.
+- **Constraint 2 (Storage Provider):** Store files in private MinIO buckets.
 - **Constraint 3 (Media DB Record):** Every successful upload MUST create a `MediaAssets` row.
 - **Constraint 4 (Uploader Audit):** `MediaAssets.uploader_user_id` MUST come from JWT user ID.
 - **Constraint 5 (Supported Types):** Allow only configured safe MIME types such as JPG, PNG, and PDF.
 - **Constraint 6 (Size Limit):** Enforce max upload size, default 10 MB unless config says otherwise.
 - **Constraint 7 (Entity Linking):** Uploaded media can be linked immediately if `entityType` and `entityId` exist, or linked later using media asset IDs.
 - **Constraint 8 (Daily Report Linking):** Daily report photos use `entity_type = "DAILY_REPORT"` and `entity_id = dailyReports.id`.
-- **Constraint 9 (URL Return):** Upload response MUST return both `mediaAssetId` and a viewable `url`.
+- **Constraint 9 (Private URL Return):** Upload response MUST return both `mediaAssetId` and a private/signed viewable `url` for authorized users.
 - **Constraint 10 (Strict CRUD Rule):** MediaAsset domain MUST implement create/upload, update/attach, delete by id, delete multiple ids, get by id, get all, and get pagination.
 
 ## 2. Exact Data Contracts (REST & GraphQL)
@@ -31,7 +31,7 @@ entityId: "" optional
   "status": "success",
   "data": {
     "mediaAssetId": "uuid-media",
-    "url": "https://minio.example.com/bucket/daily-reports/file.jpg",
+    "url": "https://minio.example.com/private-signed-url",
     "fileName": "file.jpg",
     "mimeType": "image/jpeg"
   }
@@ -157,7 +157,7 @@ sequenceDiagram
     UI->>REST: POST /api/v1/media/upload
     REST->>API: Validate JWT, type, size
     API->>MinIO: Upload file
-    MinIO-->>API: Return URL/key
+    MinIO-->>API: Return private object key
     API-->>REST: Return mediaAssetId and URL
     REST-->>UI: Store mediaAssetId
 
@@ -201,8 +201,8 @@ failed.jpg      Failed    [Retry]
 2. Validate JWT on upload.
 3. Validate MIME type and max file size.
 4. Upload object to MinIO.
-5. Insert MediaAssets row with uploader_user_id.
-6. Return mediaAssetId and url.
+5. Insert MediaAssets row with uploader_user_id and private object metadata.
+6. Return mediaAssetId and private/signed url.
 7. Implement attachMediaAssets mutation.
 8. Implement MediaAsset CRUD list/get/delete operations.
 9. Update daily report create flow to accept or attach mediaAssetIds.

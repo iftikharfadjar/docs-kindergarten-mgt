@@ -1,7 +1,7 @@
 # Parent Monitoring & Engagement Workflow
 
 ## 1. Overview
-This workflow describes how a Parent monitors an active child after registration approval. The Parent can view attendance records, daily classroom reports, photos, progress summaries, semester reports, and receive push notifications when new updates are available.
+This workflow describes how a Parent monitors an active child after registration approval. The Parent can view attendance records, daily classroom reports, photos, progress summaries, semester reports, and receive push notifications when semester reports are published.
 
 Parent access is strictly scoped to children linked through `ParentStudentLinks` and only children with `status = "ACTIVE"` are visible in monitoring screens. The system must not use `APPROVED` as a student status.
 
@@ -29,7 +29,7 @@ The workflow interacts with the following database tables:
 - `StudentEnrollments` - Links active children to classes and academic years.
 - `Attendance` - Stores attendance status and remarks.
 - `DailyReports` - Stores daily class summaries.
-- `MediaAssets` - Stores MinIO/S3 URLs for report photos.
+- `MediaAssets` - Stores private MinIO media metadata and authorized private/signed URLs for report photos.
 - `Assessments` - Stores skill-based progress data.
 - `SemesterReports` - Stores published semester summaries.
 - `Notifications` - Stores in-app notification records.
@@ -117,7 +117,8 @@ sequenceDiagram
 6. **Push Notifications**
    - Frontend asks browser permission for notifications after Parent logs in.
    - Frontend registers the FCM token through `POST /api/v1/notifications/register-device`.
-   - Parent receives push notifications for attendance updates, daily report submissions, and semester report publishing.
+   - Parent receives push notifications for semester report publishing only.
+   - Attendance and daily report updates may appear as in-app notifications, but they do not send push notifications in MVP.
    - Notification list and badge update through polling or TanStack Query refetching.
 
 ## 6. UI Wireframe

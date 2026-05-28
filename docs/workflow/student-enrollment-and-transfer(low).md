@@ -6,9 +6,10 @@
 - **Constraint 3 (No Duplicate Active Enrollment):** A student cannot have two active enrollments in the same academic year.
 - **Constraint 4 (Capacity Validation):** Before enrollment or transfer, backend must validate `targetClass.currentEnrollments + 1 <= targetClass.capacity`.
 - **Constraint 5 (Transfer Preserves History):** Transfer must not edit historical attendance, reports, or assessments. It closes old enrollment and creates a new enrollment.
-- **Constraint 6 (Soft Delete Only):** Unenroll must set `deleted_at = NOW()` on `StudentEnrollments`.
-- **Constraint 7 (Archived Student Rule):** `ARCHIVED` students cannot be enrolled or transferred.
-- **Constraint 8 (Strict CRUD Rule):** StudentEnrollment domain MUST implement create, update, delete by id, delete multiple ids, get by id, get all, and get pagination.
+- **Constraint 6 (Same-Year Transfer Only):** Transfer is allowed only between classes in the same academic year. Cross-year movement must use Student Promotion.
+- **Constraint 7 (Soft Delete Only):** Unenroll must set `deleted_at = NOW()` on `StudentEnrollments`.
+- **Constraint 8 (Archived Student Rule):** `ARCHIVED` students cannot be enrolled or transferred.
+- **Constraint 9 (Strict CRUD Rule):** StudentEnrollment domain MUST implement create, update, delete by id, delete multiple ids, get by id, get all, and get pagination.
 
 ## 2. Exact Data Contracts (GraphQL)
 
@@ -162,7 +163,7 @@ sequenceDiagram
 
     Admin->>UI: Submit transfer form
     UI->>GQL: Execute TransferStudent(input)
-    GQL->>API: Soft delete old enrollment and create new one
+    GQL->>API: Validate same academic year, soft delete old enrollment, create new one
     API-->>GQL: Return transfer result
 ```
 
@@ -207,8 +208,9 @@ Button: [Enroll]
 3. Enroll only ACTIVE students.
 4. Prevent duplicate active enrollment in same academic year.
 5. Validate class capacity.
-6. Transfer by soft deleting old enrollment and creating new enrollment.
-7. Never change historical attendance/report/assessment rows during transfer.
-8. Add Admin enrollment page, enroll modal, transfer modal, unenroll dialog.
-9. Test active, rejected, pending, and archived student enrollment behavior.
+6. Reject transfer if source and target classes are not in the same academic year.
+7. Transfer by soft deleting old enrollment and creating new enrollment.
+8. Never change historical attendance/report/assessment rows during transfer.
+9. Add Admin enrollment page, enroll modal, transfer modal, unenroll dialog.
+10. Test active, rejected, pending, and archived student enrollment behavior.
 ```

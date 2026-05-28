@@ -45,7 +45,7 @@ sequenceDiagram
 
     Teacher->>Frontend: Opens assessment page
     Frontend->>API: query GetActiveSemester(academicYearId)
-    API->>DB: Find semester where current date is within start/end date
+    API->>DB: Find semester where backend server date is within start/end date
     DB-->>API: Return active semester or null
     API-->>Frontend: Store active semester in UI state
 
@@ -68,6 +68,7 @@ sequenceDiagram
 
 3. **Active Semester Use**
    - Teacher pages call `GetActiveSemester`.
+   - Backend uses server date only; the query does not accept a date override.
    - Assessment and report creation use returned `semesterId`.
    - If there is no active semester, UI shows a blocking empty state.
 

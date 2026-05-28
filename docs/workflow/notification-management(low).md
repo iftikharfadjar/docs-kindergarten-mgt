@@ -3,13 +3,14 @@
 ## 1. Context & Business Rules (Explicit Constraints)
 - **Constraint 1 (User Scoped Reads):** Non-admin users can read only notifications where `Notifications.user_id = JWT userID`.
 - **Constraint 2 (Admin All Access):** Admin can query all notifications only through explicit Admin-only operations.
-- **Constraint 3 (In-App First):** Backend MUST create a `Notifications` database row even if FCM push send fails.
-- **Constraint 4 (Async Push):** FCM push sending MUST be asynchronous and must not block business mutations.
-- **Constraint 5 (Device Token REST):** Registering device tokens MUST use `POST /api/v1/notifications/register-device`.
-- **Constraint 6 (Mark Read Ownership):** User can mark a notification read only if they own it.
-- **Constraint 7 (Soft Delete Only):** Delete notification by setting `deleted_at = NOW()` if notification table supports soft delete.
-- **Constraint 8 (Entity Reference):** Notifications should store `entityType` and `entityId` when the notification opens a related screen.
-- **Constraint 9 (Strict CRUD Rule):** Notification domain MUST implement create, update, delete by id, delete multiple ids, get by id, get all, and get pagination.
+- **Constraint 3 (In-App First):** Backend MUST create a `Notifications` database row for configured notification events.
+- **Constraint 4 (Parent Push Scope):** Parent FCM push notifications are sent only for `SEMESTER_REPORT_PUBLISHED` in MVP.
+- **Constraint 5 (Async Push):** FCM push sending MUST be asynchronous and must not block business mutations.
+- **Constraint 6 (Device Token REST):** Registering device tokens MUST use `POST /api/v1/notifications/register-device`.
+- **Constraint 7 (Mark Read Ownership):** User can mark a notification read only if they own it.
+- **Constraint 8 (Soft Delete Only):** Delete notification by setting `deleted_at = NOW()` if notification table supports soft delete.
+- **Constraint 9 (Entity Reference):** Notifications should store `entityType` and `entityId` when the notification opens a related screen.
+- **Constraint 10 (Strict CRUD Rule):** Notification domain MUST implement create, update, delete by id, delete multiple ids, get by id, get all, and get pagination.
 
 ## 2. Exact Data Contracts (GraphQL & REST)
 
@@ -174,7 +175,7 @@ sequenceDiagram
 
     API->>API: Business event occurs
     API->>API: Create Notifications rows
-    API->>FCM: Send push async
+    API->>FCM: Send push async only if event is SEMESTER_REPORT_PUBLISHED
 
     UI->>GQL: Execute GetNotifications(limit, offset)
     GQL->>API: Return current user's notifications
@@ -223,7 +224,7 @@ Button: [Mark All Read]
 4. Add Admin-only get all/pagination for monitoring.
 5. Implement register-device REST endpoint.
 6. Create notification rows for daily report, attendance, semester report, registration review, and enrollment events.
-7. Send FCM push asynchronously.
+7. Send FCM push asynchronously only for semester report published.
 8. Keep in-app notification if push fails.
 9. Add notification bell and list in frontend.
 10. Test ownership: User A cannot read or mark User B notification.

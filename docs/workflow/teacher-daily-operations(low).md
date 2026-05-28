@@ -3,7 +3,7 @@
 ## 1. Context & Business Rules (Explicit Constraints)
 - **Constraint 1 (Write Access Validation):** The backend MUST validate that the JWT's `userID` is actively assigned to the `classId` (via the `TeacherAssignments` table) before executing `MarkAttendance` or `CreateDailyReport`.
 - **Constraint 2 (Multi-Class Context):** A teacher can belong to multiple classes. The frontend must store a `selectedClassId` in global state (e.g., TanStack Store) and pass it as an argument to all queries and mutations in this workflow.
-- **Constraint 3 (Media Uploads):** Media uploads happen via a REST API `POST` BEFORE the GraphQL mutation. The REST API returns a `mediaAssetId`. This ID must be passed to the `CreateDailyReport` GraphQL mutation (or updated later) so the backend can link the S3 image to the `DailyReport` entity using polymorphic fields (`entity_type="DAILY_REPORT"`, `entity_id=reportId`).
+- **Constraint 3 (Media Uploads):** Media uploads happen via a REST API `POST` BEFORE the GraphQL mutation. The REST API stores the file in private MinIO storage and returns a `mediaAssetId` plus authorized private/signed URL. The `mediaAssetId` must be passed to the `CreateDailyReport` GraphQL mutation (or updated later) so the backend can link the image to the `DailyReport` entity using polymorphic fields (`entity_type="DAILY_REPORT"`, `entity_id=reportId`).
 
 ## 2. Exact Data Contracts (GraphQL & REST)
 
@@ -23,7 +23,7 @@ entityType: "DAILY_REPORT"
   "status": "success",
   "data": {
     "mediaAssetId": "uuid-asset-123",
-    "url": "https://s3..."
+    "url": "https://minio.example.com/private-signed-url"
   }
 }
 ```

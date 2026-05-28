@@ -27,7 +27,7 @@ The backend system encompasses data modeling, user authentication, media storage
 * **Database:** PostgreSQL
 * **API Paradigm:** Hybrid (REST for Auth/Media, GraphQL for Relational CRUD)
 * **Authentication:** JWT (JSON Web Tokens) with Secure HTTP-Only Refresh Cookies
-* **File Storage:** AWS S3 or MinIO (Object Storage)
+* **File Storage:** Private MinIO object storage
 * **Push Notifications:** Firebase Cloud Messaging (FCM) integration
 
 ---
@@ -37,8 +37,8 @@ The backend system encompasses data modeling, user authentication, media storage
 ### 2.1 User Roles & Permissions
 
 1. **Admin:** Full system access. Manages academic years, global curriculum, teacher assignments, student enrollment, and generates secure parent registration codes.
-2. **Teacher:** Scoped access to assigned classes. Manages daily attendance, submits daily reports (with media), and logs skill assessments for enrolled students.
-3. **Parent:** Scoped access to linked children only (status APPROVED). Views daily reports, attendance records, semester assessments, and semester reports. Lists their registered children via `getParentChildren`. All parent queries enforce access control via JWT-based GraphQL middleware ensuring data isolation.
+2. **Teacher:** Read access to all classes. Write access is scoped to assigned classes for attendance, daily reports, assessments, and semester reports.
+3. **Parent:** Scoped access to linked children only (student status ACTIVE). Views daily reports, attendance records, semester assessments, and semester reports. Lists their registered children via `getParentChildren`. All parent queries enforce access control via JWT-based GraphQL middleware ensuring data isolation.
 
 ### 2.2 Core Architectural Decisions
 
@@ -279,7 +279,7 @@ erDiagram
         uuid semester_id FK
         uuid academic_year_id FK
         text summary_remarks
-        string status "DRAFT, APPROVED, PUBLISHED"
+        string status "DRAFT, PUBLISHED"
         datetime created_at
         datetime updated_at
         datetime deleted_at "Soft Delete"
@@ -290,7 +290,7 @@ erDiagram
         uuid uploader_user_id FK
         string entity_type "DAILY_REPORT, STUDENT_PHOTO"
         uuid entity_id "Polymorphic"
-        string s3_url
+        string url
         string file_name
         string mime_type
         datetime created_at
@@ -372,13 +372,13 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
 
 * **Endpoint:** `POST /api/v1/media/upload`
 * **Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
-* **Behavior:** Streams payload to S3, returns a polymorphic MediaAsset ID that can be linked in subsequent GraphQL mutations (e.g., Daily Reports).
+* **Behavior:** Streams payload to private MinIO storage, returns a polymorphic MediaAsset ID and authorized private/signed URL that can be linked in subsequent GraphQL mutations (e.g., Daily Reports).
 * **Request (Form-Data):** `file`: [Binary File Payload], `entityType`: "DAILY_REPORT"
 * **Response (201 Created):**
 ```json
 {
   "status": "success",
-  "data": { "mediaAssetId": "media-999", "url": "https://s3.bucket.url/daily_reports/photo1.jpg" }
+  "data": { "mediaAssetId": "media-999", "url": "https://minio.example.com/private-signed-url" }
 }
 ```
 
@@ -463,10 +463,10 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
 * **Request:** `mutation ParentRegisterStudent($input: ParentRegisterStudentInput!) { parentRegisterStudent(input: $input) { success message student { id firstName lastName status } } }`
 * **Behavior:** Creates parent user account, parent profile, student (status=PENDING), and parent-student link in a single transaction. The student is created in `PENDING` status awaiting admin review.
 
-**Get Parent's Children (Parent — Returns Only APPROVED Children with Enrollment Info)**
+**Get Parent's Children (Parent — Returns Only ACTIVE Children with Enrollment Info)**
 
 * **Request:** `query GetParentChildren($academicYearId: ID) { getParentChildren(academicYearId: $academicYearId) { student { id firstName lastName dob status } enrollment { id enrolledDate class { id name } } academicYear { id name } } }`
-* **Behavior:** Returns only students linked to the authenticated parent with `status = "APPROVED"`, enriched with current enrollment (class) and academic year. If `academicYearId` is provided, filters children enrolled in that specific academic year.
+* **Behavior:** Returns only students linked to the authenticated parent with `status = "ACTIVE"`, enriched with current enrollment (class) and academic year. If `academicYearId` is provided, filters children enrolled in that specific academic year.
 
 **Get Pending Registrations (Admin)**
 
@@ -474,7 +474,7 @@ REST is exclusively used for endpoints requiring specific HTTP behavior, such as
 
 **Review Parent Registration (Admin — Approve or Reject)**
 
-* **Request (Approve):** `mutation ReviewParentRegistration($studentId: ID!, $input: ReviewRegistrationInput!) { reviewParentRegistration(studentId: $studentId, input: { status: "APPROVED" }) { id firstName lastName status } }`
+* **Request (Approve):** `mutation ReviewParentRegistration($studentId: ID!, $input: ReviewRegistrationInput!) { reviewParentRegistration(studentId: $studentId, input: { status: "ACTIVE" }) { id firstName lastName status } }`
 * **Request (Reject):** `mutation ReviewParentRegistration($studentId: ID!, $input: ReviewRegistrationInput!) { reviewParentRegistration(studentId: $studentId, input: { status: "REJECTED" }) { id firstName lastName status } }`
 
 **Enroll Student in Class (Admin — Manual Step After Approval)**
@@ -702,7 +702,7 @@ Every resolver that accesses student-scoped data MUST check the caller's role:
 |------|----------|
 | ADMIN | Full access — no student-parent validation performed |
 | TEACHER | Read access to all classes. Write access restricted to assigned classes only (validated via `teacher_assignments` table). |
-| PARENT | Restricted — must validate student belongs to parent via `parent_student_links` and student status is `APPROVED` |
+| PARENT | Restricted — must validate student belongs to parent via `parent_student_links` and student status is `ACTIVE` |
 
 **Protected Queries (Parent Role)**
 
@@ -713,7 +713,7 @@ The following existing queries enforce parent-child access isolation when called
 * `getStudentAttendance(studentId, academicYearId)` — validated
 * `getDailyReports(classId, limit, offset)` — validated
 
-If a parent attempts to access a student that is not linked and APPROVED, the resolver returns a **403 Forbidden** error.
+If a parent attempts to access a student that is not linked and ACTIVE, the resolver returns a **403 Forbidden** error.
 
 **Types**
 
@@ -738,7 +738,7 @@ getStudentAttendance(studentId: ID!, academicYearId: ID!): [AttendanceRecord!]!
 
 1. **Security & Auth:**
 * Passwords must be hashed using `bcrypt` or `Argon2` before DB insertion.
-* GraphQL resolvers must check the Context for the active JWT role and validate permissions (e.g., Teachers can only query/mutate data for their assigned `class_id`).
+* GraphQL resolvers must check the Context for the active JWT role and validate permissions (e.g., Teachers can read all class data but can only mutate data for their assigned `class_id`).
 
 
 2. **Data Integrity:**
